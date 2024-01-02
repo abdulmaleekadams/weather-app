@@ -1,10 +1,14 @@
 import Container from '@/ui/Container';
+import ForecastWeatherDetails from '@/ui/ForecastWeatherDetails';
+import WeatherDetails from '@/ui/WeatherDetails';
 import WeatherIcon from '@/ui/WeatherIcon';
 import WeatherSkeleton from '@/ui/WeatherSkeleton';
 import Weather from '@/ui/weather';
 import { converKelvinToCelsius } from '@/utils/convertKelvinToCelsius';
+import { convertWindSpeed } from '@/utils/convertWindSpeed';
+import { metersToKilometers } from '@/utils/metersToKilometers';
 import axios from 'axios';
-import { format, parseISO } from 'date-fns';
+import { format, fromUnixTime, parseISO } from 'date-fns';
 import { Suspense } from 'react';
 type WeatherData = {
   cod: string;
@@ -71,7 +75,26 @@ export default async function Home() {
 
   const firstData = weatherData?.list[0];
 
-  // console.log(data);
+
+  const uniqueDates = [
+    ...new Set(
+      weatherData?.list.map(
+        (entry) => new Date(entry.dt * 1000).toISOString().split('T')[0]
+      )
+    ),
+  ];
+
+  // Filtering data to get the first entry after 6AM for each unique date
+  const firstDataForEachDate = uniqueDates.map((date) => {
+    return weatherData?.list.find((entry) => {
+      const entryDate = new Date(entry.dt * 1000).toISOString().split('T')[0];
+      const entryTime = new Date(entry.dt * 1000).getHours();
+      return entryDate === date && entryTime >= 6 && entry ;
+    });
+  });
+
+  console.log(format(parseISO('2024-01-03 06:00:00'), 'EEEE'));
+  
 
   return (
     <main className='px-3 max-w-7xl mx-auto flex flex-col gap-9 w-full pb-10 pt-4'>
@@ -125,13 +148,64 @@ export default async function Home() {
                   <p>{converKelvinToCelsius(d?.main.temp ?? 0)}°</p>
                 </div>
               ))}
-            </div> 
+            </div>
           </Container>
+        </div>
+        <div className='flex gap-4'>
+          {/* left */}
+          <Container className='justify-center flex-col px-4 items-center w-[max-content]'>
+            <p className='capitalize text-center '>
+              {firstData?.weather[0].description}
+            </p>
+            <WeatherIcon iconName={firstData?.weather[0].icon} />
+          </Container>
+          <Container className='bg-yellow-500/20  px-6 gap-4 justify-between overflow-x-auto'>
+            <WeatherDetails
+              airPressure={`${firstData?.main.pressure} hPa`}
+              visiblity={metersToKilometers(firstData?.visibility ?? 10000)}
+              humidity={`${firstData?.main.humidity}%`}
+              sunrise={format(
+                fromUnixTime(weatherData?.city.sunrise ?? 1702949452),
+                'H:mm'
+              )}
+              sunset={format(
+                fromUnixTime(weatherData?.city.sunset ?? 1702949452),
+                'H:mm'
+              )}
+              windSpeed={convertWindSpeed(firstData?.wind.speed ?? 1.64)}
+            />
+          </Container>
+          {/* right */}
         </div>
       </section>
       {/*  7 day forecast data */}
       <section className='flex w-full flex-col gap-4'>
-        <p className="text-2xl">Forcast (7 days)</p>
+        <p className='text-2xl'>Forcast (7 days)</p>
+        {firstDataForEachDate.map((d, i) => (
+          <ForecastWeatherDetails
+            key={i}
+            airPressure={`${d?.main.pressure} hPa`}
+            visiblity={metersToKilometers(d?.visibility ?? 10000)}
+            humidity={`${d?.main.humidity}%`}
+            sunrise={format(
+              fromUnixTime(weatherData?.city.sunrise ?? 1702949452),
+              'H:mm'
+            )}
+            sunset={format(
+              fromUnixTime(weatherData?.city.sunset ?? 1702949452),
+              'H:mm'
+            )}
+            windSpeed={convertWindSpeed(d?.wind.speed ?? 1.64)}
+            date={d?.dt_txt ? format(parseISO(d?.dt_txt ?? ''), 'dd.MM') : ''}
+            day={d?.dt_txt ? format(parseISO(d?.dt_txt ?? ''), 'EEEE') : ''}
+            description={d?.weather[0].description ?? ''}
+            weatherIcon={d?.weather[0].icon ?? ''}
+            feels_like={d?.main.feels_like ?? 0}
+            temp_max={d?.main.temp_max ?? 0}
+            temp_min={d?.main.temp_min ?? 0}
+            temp={d?.main.temp ?? 0}
+          />
+        ))}
       </section>
     </main>
   );
