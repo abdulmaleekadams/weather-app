@@ -23,7 +23,7 @@ const SearchBox = ({ value, onChange, onSubmit, customClass }: Props) => {
         onChange={onChange}
         value={value}
       />
-      <button className='px-4 py-[9px] bg-yellow-500 text-white rounded-r-md focus:outline-none hover:bg-yellow-600 whitespace-nowrap h-full'>
+      <button type='submit' className='px-4 py-[9px] bg-yellow-500 text-white rounded-r-md focus:outline-none hover:bg-yellow-600 whitespace-nowrap h-full'>
         <IoSearch />
       </button>
     </form>
